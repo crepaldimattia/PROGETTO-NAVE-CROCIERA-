@@ -8,27 +8,29 @@ from misurazione import leggi_temperatura, leggi_umidita
 
 
 # ===== LETTURA PARAMETRI DAL FILE =====
+# Apro il file di configurazione e leggo i parametri
 with open("configurazione/parametri.conf", "r") as file:
     parametri = json.load(file)
 
-TEMPO = parametri["TEMPO_RILEVAZIONE"]
-DECIMALI = parametri["N_DECIMALI"]
-CABINE = parametri["N_CABINE"]
-PONTI = parametri["N_PONTI"]
+# Salvo i parametri in variabili più comode
+TEMPO = parametri["TEMPO_RILEVAZIONE"]     # tempo tra una rilevazione e l'altra
+DECIMALI = parametri["N_DECIMALI"]         # numero di cifre decimali
+CABINE = parametri["N_CABINE"]             # numero totale di cabine
+PONTI = parametri["N_PONTI"]               # numero totale di ponti
 
 
 # ===== PREPARAZIONE FILE DI OUTPUT =====
-# Creo la cartella se non esiste
+# Creo la cartella "dati" se non esiste
 os.makedirs("dati", exist_ok=True)
 
-# Apro il file in append per non perdere i dati precedenti
+# Apro il file in modalità append per aggiungere nuovi dati
 file_dati = open("dati/iotdata.dbt", "a")
 
 
 # ===== VARIABILI PER STATISTICHE =====
-numero_rilevazioni = 0
-somma_temperatura = 0
-somma_umidita = 0
+numero_rilevazioni = 0     # contatore delle rilevazioni
+somma_temperatura = 0     # somma delle temperature
+somma_umidita = 0         # somma delle umidità
 
 print("Simulazione avviata (CTRL+C per terminare)")
 
@@ -38,18 +40,18 @@ try:
     while True:
         numero_rilevazioni += 1
 
-        # Scelgo cabina e ponte casuali
+        # Scelgo una cabina e un ponte in modo casuale
         cabina = random.randint(1, CABINE)
         ponte = random.randint(1, PONTI)
 
-        # Lettura dei dati dal sensore simulato
+        # Leggo i valori dal sensore simulato
         temperatura = leggi_temperatura(DECIMALI)
         umidita = leggi_umidita(DECIMALI)
 
-        # Timestamp corrente
+        # Prendo il timestamp corrente
         tempo_corrente = time.time()
 
-        # Creazione del dato IoT
+        # Creo il dato IoT sotto forma di dizionario
         dato = {
             "cabina": cabina,
             "ponte": ponte,
@@ -59,17 +61,17 @@ try:
             "umidita": umidita
         }
 
-        # Stampa a video per debug
+        # Stampo il dato a video per controllo
         print(json.dumps(dato, indent=4))
 
-        # Salvataggio su file
+        # Scrivo il dato nel file
         file_dati.write(json.dumps(dato) + "\n")
 
-        # Aggiorno le somme per le medie
+        # Aggiorno le somme per calcolare le medie
         somma_temperatura += temperatura
         somma_umidita += umidita
 
-        # Attesa prima della prossima rilevazione
+        # Aspetto prima della prossima rilevazione
         time.sleep(TEMPO)
 
 
@@ -77,11 +79,14 @@ try:
 except KeyboardInterrupt:
     print("\nSimulazione terminata")
 
+    # Calcolo le medie finali
     media_temp = round(somma_temperatura / numero_rilevazioni, DECIMALI)
     media_umid = round(somma_umidita / numero_rilevazioni, DECIMALI)
 
+    # Stampo le statistiche finali
     print("Rilevazioni totali:", numero_rilevazioni)
     print("Temperatura media:", media_temp, "°C")
     print("Umidità media:", media_umid, "%")
 
+    # Chiudo il file
     file_dati.close()
